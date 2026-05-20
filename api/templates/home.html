@@ -1,0 +1,87 @@
+
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Fraunces:ital,opsz@0,9..144;1,9..144&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link href="{{ url_for('static', path='/main.css') }}" rel="stylesheet">
+
+
+</head>
+<body>
+
+  <div class="card">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-title">Chat with your <span>PDF</span></div>
+      <div class="brand-sub">Upload a document, then ask anything about it.</div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step-card active" id="step1">
+        <div class="step-num">Step 01</div>
+        <div class="step-icon blue"><i class="ti ti-upload"></i></div>
+        <div class="step-label">Upload PDF</div>
+        <div class="step-desc">Select any PDF file from your device to get started.</div>
+      </div>
+
+      <div class="step-connector"><i class="ti ti-arrow-right"></i></div>
+
+      <div class="step-card" id="step2">
+        <div class="step-num">Step 02</div>
+        <div class="step-icon teal"><i class="ti ti-message-circle"></i></div>
+        <div class="step-label">Chat with AI</div>
+        <div class="step-desc">Ask questions and get instant answers from the document.</div>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="upload-zone" id="uploadZone">
+      <i class="ti ti-file-type-pdf upload-zone-icon"></i>
+      <div class="upload-zone-text">
+        <strong>Click to browse</strong> or drag &amp; drop your PDF here
+      </div>
+      <div class="upload-zone-note">PDF files only &middot; max 20 MB</div>
+      <input type="file" accept=".pdf" id="fileInput" style="display:none" />
+    </div>
+
+    <!-- File info -->
+    <div class="file-info" id="fileInfo">
+      <i class="ti ti-file-filled file-info-icon"></i>
+      <span class="file-info-name" id="fileName">document.pdf</span>
+      <button class="file-info-remove" id="removeFile" aria-label="Remove file">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnUpload">
+        <i class="ti ti-upload"></i>
+        Upload PDF
+      </button>
+      <button class="btn btn-secondary" id="btnChat">
+        <i class="ti ti-message-circle"></i>
+        Chat with AI &rarr;
+      </button>
+    </div>
+
+    <!-- Hint -->
+    <div class="hint">
+      <i class="ti ti-lock"></i>
+      Your file stays private and secure
+    </div>
+
+  </div>
+
+    <script src="{{ url_for('static', path='/main.js') }}"></script>
+
+</body>
+</html>

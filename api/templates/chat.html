@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Chat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .chat-box {
+      width: 100%;
+      max-width: 600px;
+      height: 90vh;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .chat-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header i { font-size: 22px; color: #185FA5; }
+
+    .chat-header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .chat-header p { font-size: 12px; color: #888; }
+
+    /* Messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+    .row { display: flex; gap: 8px; align-items: flex-end; }
+    .row.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .avatar.ai  { background: #E6F1FB; color: #185FA5; }
+    .avatar.usr { background: #eee; color: #555; font-size: 11px; }
+
+    .bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      border-radius: 16px;
+    }
+
+    .bubble.ai {
+      background: #f5f5f5;
+      color: #1a1a1a;
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble.user {
+      background: #185FA5;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .time { font-size: 10px; color: #bbb; padding: 2px 4px; }
+
+    .bwrap { display: flex; flex-direction: column; gap: 3px; }
+    .row.user .bwrap { align-items: flex-end; }
+
+    /* Typing dots */
+    .dots { display: flex; gap: 4px; padding: 2px 0; }
+    .dot {
+      width: 7px; height: 7px;
+      background: #bbb; border-radius: 50%;
+      animation: bop 1.1s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: .2s; }
+    .dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes bop {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-5px); }
+    }
+
+    /* Input */
+    .input-area {
+      padding: 12px 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    textarea {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 100px;
+      line-height: 1.5;
+      color: #1a1a1a;
+      transition: border-color .15s;
+    }
+
+    textarea:focus { border-color: #185FA5; }
+    textarea::placeholder { color: #bbb; }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      background: #185FA5;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+
+    .send-btn:hover    { background: #0C447C; }
+    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="chat-box">
+
+  <div class="chat-header">
+    <i class="ti ti-file-type-pdf"></i>
+    <div>
+      <h1>PDF Chat</h1>
+      <p>{{ pdf_name }}</p>
+    </div>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="row">
+      <div class="avatar ai"><i class="ti ti-sparkles"></i></div>
+      <div class="bwrap">
+        <div class="bubble ai">Hi! I've read your PDF. Ask me anything about it.</div>
+        <div class="time">Just now</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea
+      id="inp"
+      rows="1"
+      placeholder="Ask a question about the PDF…"
+      onkeydown="onKey(event)"
+      oninput="resize(this)"
+    ></textarea>
+    <button class="send-btn" id="snd" onclick="send()">
+      <i class="ti ti-arrow-up"></i>
+    </button>
+  </div>
+
+</div>
+
+<script>
+  const msgs = document.getElementById('messages');
+  const inp  = document.getElementById('inp');
+  const snd  = document.getElementById('snd');
+
+ const PDF_NAME = "{{ pdf_name }}";   {# ← Jinja renders the value #}
+  const API_URL  = "http://127.0.0.1:8000/chat/fetch";
+
+  let busy = false;
+
+  function resize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  function onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function scroll() { msgs.scrollTop = msgs.scrollHeight; }
+
+  function addUser(text) {
+    msgs.innerHTML += `
+      <div class="row user">
+        <div class="avatar usr">You</div>
+        <div class="bwrap">
+          <div class="bubble user">${esc(text)}</div>
+          <div class="time">${now()}</div>
+        </div>
+      </div>`;
+    scroll();
+  }
+
+  function addTyping() {
+    const id = 'typ' + Date.now();
+    msgs.innerHTML += `
+      <div class="row" id="${id}">
+        <div class="avatar ai"><i class="ti ti-sparkles"></i></div>
+        <div class="bubble ai">
+          <div class="dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+      </div>`;
+    scroll();
+    return id;
+  }
+
+  function addAI(text, tid) {
+    document.getElementById(tid)?.remove();
+    msgs.innerHTML += `
+      <div class="row">
+        <div class="avatar ai"><i class="ti ti-sparkles"></i></div>
+        <div class="bwrap">
+          <div class="bubble ai">${esc(text)}</div>
+          <div class="time">${now()}</div>
+        </div>
+      </div>`;
+    scroll();
+  }
+
+  async function send() {
+    const q = inp.value.trim();
+    if (!q || busy) return;
+    busy = true;
+    snd.disabled = true;
+    addUser(q);
+    inp.value = '';
+    inp.style.height = 'auto';
+    const tid = addTyping();
+    try {
+      const res  = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, pdf_name: PDF_NAME }),
+      });
+      const data = await res.json();
+      addAI(res.ok ? data.answer : 'Error: ' + (data.detail || res.statusText), tid);
+    } catch {
+      addAI('Cannot reach the server. Make sure the API is running.', tid);
+    }
+    busy = false;
+    snd.disabled = false;
+    inp.focus();
+  }
+</script>
+
+</body>
+</html>
