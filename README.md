@@ -85,7 +85,7 @@ documind-ai/
 │   ├── index.html       # Upload page
 │   └── chat.html        # Chat page
 ├── docker-compose.yml   # Qdrant Docker setup
-├── .env.example         # Environment variable template
+├── rag-flow
 ├── .gitignore
 └── README.md
 ```
