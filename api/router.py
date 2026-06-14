@@ -24,7 +24,7 @@ def home_page(request: Request):
         }
     )
 
-@router_frontend.get("/chatpage")
+@router_frontend.get("/chatpagehome")
 def chat_page(request: Request, pdf: str = ""):
     return templates.TemplateResponse(
         request=request,
