@@ -64,7 +64,7 @@ async def ingest_pdf(file: UploadFile = File(...)):
 @router_two.post("/fetch")
 def chat(req: ChatRequest):
     if not req.question.strip():
-        raise HTTPException(400, "Question cannot be empty.")
+        raise HTTPException(400, "Question cannot be empty ask questions")
 
     answer = run_rag(req.question,req.pdf_name)   
 
