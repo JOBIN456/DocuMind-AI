@@ -83,7 +83,7 @@ async function uploadToAPI(file) {
     btnUpload.innerHTML = '<i class="ti ti-circle-check"></i> Uploaded';
 
   } catch (err) {
-    alert('Cannot reach the server. Make sure the API is running.');
+    alert('Cannot reach the server. Make sure the API is running correctly');
     resetUpload();
   }
 
