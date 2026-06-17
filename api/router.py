@@ -39,7 +39,7 @@ def read_root():
     return {"Hello": "World"}
 
 
-@router.post("/ingest")
+@router.post("/ingest/data")
 async def ingest_pdf(file: UploadFile = File(...)):
     collection_name = file.filename.replace(".pdf", "").replace(" ", "_").lower()
 

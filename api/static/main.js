@@ -66,7 +66,7 @@ async function uploadToAPI(file) {
   btnUpload.innerHTML = '<i class="ti ti-loader"></i> Uploading…';
 
   try {
-    const res  = await fetch('http://127.0.0.1:8000/pdf/ingest', {
+    const res  = await fetch('http://127.0.0.1:8000/pdf/ingest/data', {
       method: 'POST',
       body: formData,
     });
