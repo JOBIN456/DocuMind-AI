@@ -13,12 +13,15 @@ from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
 from sentence_transformers import SentenceTransformer
 from db.qdrant_setup import qdrant_client
-from qdrant_client.models import PointStruct, VectorParams, Distance
+from qdrant_client.models import PointStruct, VectorParams, Distance,SparseVector
+from fastembed import SparseTextEmbedding
+
 
 # ── Load once at import time ──────────────────────────────────────
 embed_model   = SentenceTransformer("all-MiniLM-L6-v2")
 converter     = DocumentConverter()
 
+sparse_model = SparseTextEmbedding(model_name="Qdrant/bm25")
 
 # ── State ─────────────────────────────────────────────────────────
 class PdfState(TypedDict):
@@ -37,75 +40,100 @@ def chunk_node(state: PdfState):
     )
 
     raw_chunks = list(chunker.chunk(state["docling_doc"]))
+
     chunks = []
+
+    texts = []
 
     for raw in raw_chunks:
         text = raw.text.strip()
         if not text:
             continue
 
-        meta     = raw.meta
+        meta = raw.meta
         headings = meta.headings if meta.headings else []
-        page_start = page_end = None
+
+        page_start = None
+        page_end = None
 
         if hasattr(meta, "doc_items") and meta.doc_items:
             pages = []
+
             for item in meta.doc_items:
                 if hasattr(item, "prov") and item.prov:
                     for prov in item.prov:
                         if hasattr(prov, "page_no"):
                             pages.append(prov.page_no)
+
             if pages:
-                page_start, page_end = min(pages), max(pages)
+                page_start = min(pages)
+                page_end = max(pages)
 
-        chunks.append({
-            "id":         hashlib.md5(text.encode()).hexdigest()[:8],
-            "text":       text,
-            "heading":    " > ".join(headings) if headings else None,
+        chunk = {
+            "id": hashlib.md5(text.encode()).hexdigest()[:8],
+            "text": text,
+            "heading": " > ".join(headings) if headings else None,
             "page_start": page_start,
-            "page_end":   page_end,
-        })
+            "page_end": page_end,
+        }
 
-    print(f"📄 {len(chunks)} chunks produced")
+        chunks.append(chunk)
+        texts.append(text)
+
+    # Generate sparse vectors
+    sparse_vectors = list(sparse_model.embed(texts))
+
+    for chunk, sparse in zip(chunks, sparse_vectors):
+        chunk["sparse_indices"] = sparse.indices.tolist()
+        chunk["sparse_values"] = sparse.values.tolist()
+
+    print(f"Docling produced {len(chunks)} chunks")
+
     return {"chunks": chunks}
 
-
 def embed_node(state: PdfState):
-    chunks     = state["chunks"]
-    texts      = [c["text"] for c in chunks]
+    chunks = state["chunks"]
+    texts = [c["text"] for c in chunks]
     embeddings = embed_model.encode(texts)
 
     for i, chunk in enumerate(chunks):
         chunk["embedding"] = embeddings[i].tolist()
 
-    return {"chunks": chunks, "embeddings": embeddings.tolist()}
+    return {
+        "chunks": chunks,
+        "embeddings": embeddings.tolist()
+    }
 
 def qdrant_node(state: PdfState):
-    # create collection if it doesn't exist
-    existing = [c.name for c in qdrant_client.get_collections().collections]
-    if state["collection_name"] not in existing:
-        qdrant_client.create_collection(
-            collection_name=state["collection_name"],
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-        )
-        print(f"✅ Created collection: {state['collection_name']}")
+    points = []
 
-    points = [
-        PointStruct(
-            id=i,
-            vector=chunk["embedding"],
-            payload={
-                "text":       chunk["text"],
-                "heading":    chunk.get("heading"),
-                "page_start": chunk.get("page_start"),
-                "page_end":   chunk.get("page_end"),
-            }
+    for i, chunk in enumerate(state["chunks"]):
+        points.append(
+            PointStruct(
+                id=i,
+                vector={
+                    "dense": chunk["embedding"],
+                    "sparse": SparseVector(
+                        indices=chunk["sparse_indices"],
+                        values=chunk["sparse_values"],
+                    ),
+                },
+                payload={
+                    "text": chunk["text"],
+                    "heading": chunk.get("heading"),
+                    "page_start": chunk.get("page_start"),
+                    "page_end": chunk.get("page_end"),
+                },
+            )
         )
-        for i, chunk in enumerate(state["chunks"])
-    ]
 
-    qdrant_client.upsert(collection_name=state["collection_name"], points=points)
+    qdrant_client.upsert(
+        collection_name=state["collection_name"],
+        points=points,
+    )
+
     print(f"✅ {len(points)} chunks inserted into → {state['collection_name']}")
+
     return {"chunks": state["chunks"]}
 
 # ── Build graph once ──────────────────────────────────────────────
